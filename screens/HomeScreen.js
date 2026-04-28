@@ -4,80 +4,127 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ScrollView,
+  SafeAreaView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function HomeScreen({ navigation }) {
   const [user, setUser] = useState(null);
+  const [membershipPlan, setMembershipPlan] = useState(null);
 
   useEffect(() => {
-    const getUser = async () => {
+    const loadData = async () => {
       const storedUser = await AsyncStorage.getItem('user');
+      const storedPlan = await AsyncStorage.getItem('membershipPlan');
+
       if (storedUser) {
         setUser(JSON.parse(storedUser));
       }
+
+      if (storedPlan) {
+        setMembershipPlan(JSON.parse(storedPlan));
+      }
     };
 
-    getUser();
-  }, []);
+    const unsubscribe = navigation.addListener('focus', loadData);
+    return unsubscribe;
+  }, [navigation]);
 
   const handleLogout = () => {
     navigation.navigate('Welcome');
   };
 
   return (
-    <View style={styles.page}>
-      <View style={styles.headerCard}>
-        <Text style={styles.smallText}>Welcome back</Text>
-        <Text style={styles.title}>
-          {user ? user.name : 'Gym Member'}
-        </Text>
-        <Text style={styles.subtitle}>
-          Sprint 1 prototype: member registration and login completed.
-        </Text>
-      </View>
-
-      <View style={styles.infoCard}>
-        <Text style={styles.cardTitle}>Account Details</Text>
-
-        <View style={styles.row}>
-          <Text style={styles.label}>Name</Text>
-          <Text style={styles.value}>{user ? user.name : '-'}</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.page}>
+        <View style={styles.headerCard}>
+          <Text style={styles.smallText}>Welcome back</Text>
+          <Text style={styles.title}>{user ? user.name : 'Gym Member'}</Text>
+          <Text style={styles.subtitle}>
+            Manage your gym account, membership plan and billing status.
+          </Text>
         </View>
 
-        <View style={styles.row}>
-          <Text style={styles.label}>Email</Text>
-          <Text style={styles.value}>{user ? user.email : '-'}</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Account Details</Text>
+
+          <View style={styles.row}>
+            <Text style={styles.label}>Name</Text>
+            <Text style={styles.value}>{user ? user.name : '-'}</Text>
+          </View>
+
+          <View style={styles.row}>
+            <Text style={styles.label}>Email</Text>
+            <Text style={styles.value}>{user ? user.email : '-'}</Text>
+          </View>
         </View>
-      </View>
 
-      <TouchableOpacity style={styles.primaryButton}>
-        <Text style={styles.primaryText}>Continue to Membership Plans</Text>
-      </TouchableOpacity>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Membership & Billing</Text>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
-    </View>
+          {membershipPlan ? (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.label}>Plan</Text>
+                <Text style={styles.value}>{membershipPlan.name}</Text>
+              </View>
+
+              <View style={styles.row}>
+                <Text style={styles.label}>Price</Text>
+                <Text style={styles.value}>{membershipPlan.price}</Text>
+              </View>
+
+              <View style={styles.row}>
+                <Text style={styles.label}>Status</Text>
+                <Text style={styles.activeStatus}>{membershipPlan.status}</Text>
+              </View>
+
+              <View style={styles.row}>
+                <Text style={styles.label}>Billing Date</Text>
+                <Text style={styles.value}>{membershipPlan.billingDate}</Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>No membership plan selected yet.</Text>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate('Membership')}
+        >
+          <Text style={styles.primaryText}>
+            {membershipPlan ? 'Change Membership Plan' : 'Choose Membership Plan'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  page: {
+  safeArea: {
     flex: 1,
-    backgroundColor: '#101820',
-    padding: 24,
-    justifyContent: 'center',
+    backgroundColor: '#071A12',
+  },
+  page: {
+    padding: 20,
+    paddingBottom: 40,
   },
   headerCard: {
     backgroundColor: '#00A86B',
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 24,
     marginBottom: 18,
   },
   smallText: {
-    color: '#eafff6',
-    fontSize: 15,
+    color: '#E8FFF5',
+    fontSize: 14,
     marginBottom: 6,
   },
   title: {
@@ -87,40 +134,50 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   subtitle: {
-    color: '#eafff6',
+    color: '#E8FFF5',
     fontSize: 15,
     lineHeight: 22,
   },
-  infoCard: {
+  card: {
     backgroundColor: '#ffffff',
     borderRadius: 22,
     padding: 22,
-    marginBottom: 18,
+    marginBottom: 16,
   },
   cardTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#101820',
-    marginBottom: 16,
+    marginBottom: 18,
   },
   row: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
   label: {
     color: '#777',
-    fontSize: 14,
+    fontSize: 13,
+    marginBottom: 4,
   },
   value: {
     color: '#101820',
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginTop: 3,
+  },
+  activeStatus: {
+    color: '#00A86B',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  emptyText: {
+    color: '#777',
+    fontSize: 15,
   },
   primaryButton: {
     backgroundColor: '#00A86B',
-    paddingVertical: 15,
-    borderRadius: 14,
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: 'center',
+    marginTop: 6,
     marginBottom: 12,
   },
   primaryText: {
@@ -130,10 +187,11 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     borderColor: '#00A86B',
-    borderWidth: 1,
-    paddingVertical: 15,
-    borderRadius: 14,
+    borderWidth: 1.5,
+    paddingVertical: 16,
+    borderRadius: 16,
     alignItems: 'center',
+    marginBottom: 20,
   },
   logoutText: {
     color: '#00A86B',
