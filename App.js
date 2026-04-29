@@ -7,6 +7,7 @@ import LoginScreen from './screens/LoginScreen.js';
 import RegisterScreen from './screens/RegisterScreen.js';
 import HomeScreen from './screens/HomeScreen.js';
 import MembershipScreen from './screens/MembershipScreen.js';
+import ClassScheduleScreen from './screens/ClassScheduleScreen.js';
 
 const Stack = createNativeStackNavigator();
 
@@ -19,6 +20,7 @@ export default function App() {
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Membership" component={MembershipScreen} />
+        <Stack.Screen name="Classes" component={ClassScheduleScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
