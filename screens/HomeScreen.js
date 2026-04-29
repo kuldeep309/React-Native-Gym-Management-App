@@ -12,11 +12,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export default function HomeScreen({ navigation }) {
   const [user, setUser] = useState(null);
   const [membershipPlan, setMembershipPlan] = useState(null);
+  const [selectedClass, setSelectedClass] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
       const storedUser = await AsyncStorage.getItem('user');
       const storedPlan = await AsyncStorage.getItem('membershipPlan');
+      const storedClass = await AsyncStorage.getItem('selectedClass');
 
       if (storedUser) {
         setUser(JSON.parse(storedUser));
@@ -24,6 +26,10 @@ export default function HomeScreen({ navigation }) {
 
       if (storedPlan) {
         setMembershipPlan(JSON.parse(storedPlan));
+      }
+
+      if (storedClass) {
+        setSelectedClass(JSON.parse(storedClass));
       }
     };
 
@@ -88,6 +94,34 @@ export default function HomeScreen({ navigation }) {
           ) : (
             <Text style={styles.emptyText}>No membership plan selected yet.</Text>
           )}
+
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Class & Activity</Text>
+
+          {selectedClass ? (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.label}>Class</Text>
+                <Text style={styles.value}>{selectedClass.name}</Text>
+              </View>
+
+              <View style={styles.row}>
+                <Text style={styles.label}>Time</Text>
+                <Text style={styles.value}>{selectedClass.time}</Text>
+              </View>
+
+              <View style={styles.row}>
+                <Text style={styles.label}>Trainer</Text>
+                <Text style={styles.value}>{selectedClass.trainer}</Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>
+              No class selected yet.
+            </Text>
+          )}
         </View>
 
         <TouchableOpacity
@@ -102,6 +136,16 @@ export default function HomeScreen({ navigation }) {
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate('Classes')}
+        >
+          <Text style={styles.primaryText}>
+            Choose Class / Activity
+          </Text>
+        </TouchableOpacity>
+
       </ScrollView>
     </SafeAreaView>
   );
