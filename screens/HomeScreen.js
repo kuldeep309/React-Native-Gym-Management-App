@@ -13,12 +13,15 @@ export default function HomeScreen({ navigation }) {
   const [user, setUser] = useState(null);
   const [membershipPlan, setMembershipPlan] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
+  const [assignedTrainer, setAssignedTrainer] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
       const storedUser = await AsyncStorage.getItem('user');
       const storedPlan = await AsyncStorage.getItem('membershipPlan');
       const storedClass = await AsyncStorage.getItem('selectedClass');
+      const storedTrainer = await AsyncStorage.getItem('assignedTrainer');
+
 
       if (storedUser) {
         setUser(JSON.parse(storedUser));
@@ -31,15 +34,26 @@ export default function HomeScreen({ navigation }) {
       if (storedClass) {
         setSelectedClass(JSON.parse(storedClass));
       }
+
+      if (storedTrainer) {
+        setAssignedTrainer(JSON.parse(storedTrainer));
+      }
     };
 
     const unsubscribe = navigation.addListener('focus', loadData);
     return unsubscribe;
   }, [navigation]);
 
-  const handleLogout = () => {
-    navigation.navigate('Welcome');
-  };
+const handleLogout = async () => {
+  await AsyncStorage.removeItem('membershipPlan');
+  await AsyncStorage.removeItem('selectedClass');
+  await AsyncStorage.removeItem('assignedTrainer');
+
+  navigation.reset({
+    index: 0,
+    routes: [{ name: 'Welcome' }],
+  });
+};
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -124,6 +138,33 @@ export default function HomeScreen({ navigation }) {
           )}
         </View>
 
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Trainer Assignment</Text>
+
+          {assignedTrainer ? (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.label}>Trainer</Text>
+                <Text style={styles.value}>{assignedTrainer.name}</Text>
+              </View>
+
+              <View style={styles.row}>
+                <Text style={styles.label}>Specialization</Text>
+                <Text style={styles.value}>{assignedTrainer.specialization}</Text>
+              </View>
+
+              <View style={styles.row}>
+                <Text style={styles.label}>Working Hours</Text>
+                <Text style={styles.value}>{assignedTrainer.hours}</Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.emptyText}>
+              No trainer assigned yet.
+            </Text>
+          )}
+        </View>
+
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => navigation.navigate('Membership')}
@@ -133,17 +174,26 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => navigation.navigate('Classes')}
         >
           <Text style={styles.primaryText}>
-            Choose Class / Activity
+            Select Class / Activity
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate('Trainer')}
+        >
+          <Text style={styles.primaryText}>
+            Assign Trainer
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
 
       </ScrollView>

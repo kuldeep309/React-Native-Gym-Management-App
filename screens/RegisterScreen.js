@@ -40,6 +40,11 @@ export default function RegisterScreen({ navigation }) {
 
     try {
       await AsyncStorage.setItem('user', JSON.stringify(userData));
+
+      await AsyncStorage.removeItem('membershipPlan');
+      await AsyncStorage.removeItem('selectedClass');
+      await AsyncStorage.removeItem('assignedTrainer');
+
       Alert.alert('Success', 'Registration successful');
       navigation.navigate('Login');
     } catch (error) {
