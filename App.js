@@ -8,6 +8,7 @@ import RegisterScreen from './screens/RegisterScreen.js';
 import HomeScreen from './screens/HomeScreen.js';
 import MembershipScreen from './screens/MembershipScreen.js';
 import ClassScheduleScreen from './screens/ClassScheduleScreen.js';
+import TrainerScreen from './screens/TrainerScreen.js';
 
 const Stack = createNativeStackNavigator();
 
@@ -21,6 +22,7 @@ export default function App() {
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Membership" component={MembershipScreen} />
         <Stack.Screen name="Classes" component={ClassScheduleScreen} />
+        <Stack.Screen name="Trainer" component={TrainerScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
