@@ -30,3 +30,12 @@ A React Native gym management system prototype.
 - Store selected class using AsyncStorage
 - Display selected class on Home screen
 - Navigation between Home and Classes screen
+
+## Sprint 4 Completed
+
+- Trainer assignment screen UI
+- Display available trainers with specialization and working hours
+- Trainer selection functionality
+- Store assigned trainer using AsyncStorage
+- Display trainer details on Home screen
+- Fixed data persistence issue by clearing previous user data on registration and logout
