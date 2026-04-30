@@ -21,3 +21,12 @@ A React Native gym management system prototype.
 - Home screen updated with membership information
 - Improved UI design with scroll support
 - Fixed navigation flow (Register → Login → Home → Membership → Home)
+
+## Sprint 3 Completed
+
+- Class schedule screen UI
+- Display available gym classes
+- Class selection and booking functionality
+- Store selected class using AsyncStorage
+- Display selected class on Home screen
+- Navigation between Home and Classes screen
