@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,11 @@ import {
   Alert,
   ScrollView,
   SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 const plans = [
   {
@@ -37,6 +40,10 @@ const plans = [
 export default function MembershipScreen({ navigation }) {
   const [selectedPlan, setSelectedPlan] = useState(null);
 
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
+
   const handleConfirm = async () => {
     if (!selectedPlan) {
       Alert.alert('Select a Plan', 'Please choose a membership plan first.');
@@ -50,11 +57,7 @@ export default function MembershipScreen({ navigation }) {
     };
 
     try {
-      await AsyncStorage.setItem(
-        'membershipPlan',
-        JSON.stringify(subscriptionData)
-      );
-
+      await AsyncStorage.setItem('membershipPlan', JSON.stringify(subscriptionData));
       Alert.alert('Success', `${selectedPlan.name} plan selected successfully.`);
       navigation.navigate('Home');
     } catch (error) {
@@ -64,95 +67,80 @@ export default function MembershipScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.header}>
-          <Text style={styles.smallText}>Membership Plans</Text>
-          <Text style={styles.title}>Choose Your Plan</Text>
-          <Text style={styles.subtitle}>
-            Select a membership plan that fits your fitness journey.
+      <StatusBar barStyle="light-content" backgroundColor="#1554D9" />
+
+      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={['#1554D9', '#4338CA']} style={styles.header}>
+          <Text style={styles.headerLabel}>MEMBERSHIP</Text>
+          <Text style={styles.headerTitle}>Choose Your Plan</Text>
+          <Text style={styles.headerSub}>
+            Select the right plan for your training goals.
           </Text>
-        </View>
+        </LinearGradient>
 
-        {plans.map((plan) => {
-          const isSelected = selectedPlan?.id === plan.id;
+        <View style={styles.content}>
+          {plans.map((plan) => {
+            const isSelected = selectedPlan?.id === plan.id;
 
-          return (
-            <TouchableOpacity
-              key={plan.id}
-              activeOpacity={0.9}
-              style={[
-                styles.planCard,
-                isSelected && styles.selectedPlanCard,
-              ]}
-              onPress={() => setSelectedPlan(plan)}
-            >
-              <View style={styles.planHeader}>
-                <View>
-                  <Text
-                    style={[
-                      styles.planName,
-                      isSelected && styles.selectedText,
-                    ]}
-                  >
-                    {plan.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.planDescription,
-                      isSelected && styles.selectedSubText,
-                    ]}
-                  >
-                    {plan.description}
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.radioCircle,
-                    isSelected && styles.radioCircleSelected,
-                  ]}
-                >
-                  {isSelected && <Text style={styles.tick}>✓</Text>}
-                </View>
-              </View>
-
-              <Text
-                style={[
-                  styles.price,
-                  isSelected && styles.selectedPrice,
-                ]}
+            return (
+              <TouchableOpacity
+                key={plan.id}
+                activeOpacity={0.9}
+                style={[styles.planCard, isSelected && styles.selectedPlanCard]}
+                onPress={() => setSelectedPlan(plan)}
               >
-                {plan.price}
-              </Text>
+                <View style={styles.planTop}>
+                  <View>
+                    <Text style={styles.planName}>{plan.name}</Text>
+                    <Text style={styles.planDescription}>{plan.description}</Text>
+                  </View>
 
-              <View style={styles.featureList}>
-                {plan.features.map((feature, index) => (
-                  <Text
-                    key={index}
-                    style={[
-                      styles.feature,
-                      isSelected && styles.selectedFeature,
-                    ]}
-                  >
-                    ✓ {feature}
-                  </Text>
-                ))}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                  <View style={[styles.radioCircle, isSelected && styles.radioCircleSelected]}>
+                    {isSelected && <Ionicons name="checkmark" size={18} color="#ffffff" />}
+                  </View>
+                </View>
 
-        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-          <Text style={styles.confirmText}>Confirm Membership Plan</Text>
-        </TouchableOpacity>
+                <Text style={styles.price}>{plan.price}</Text>
 
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.navigate('Home')}
-        >
-          <Text style={styles.backText}>Back to Home</Text>
-        </TouchableOpacity>
+                <View style={styles.featureList}>
+                  {plan.features.map((feature, index) => (
+                    <View key={index} style={styles.featureRow}>
+                      <Ionicons name="checkmark-circle" size={18} color="#1554D9" />
+                      <Text style={styles.feature}>{feature}</Text>
+                    </View>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+
+          <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
+            <Text style={styles.confirmText}>Confirm Membership Plan</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Home')}>
+          <Ionicons name="grid-outline" size={23} color="#94A3B8" />
+          <Text style={styles.footerText}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.footerItem, styles.footerActive]}>
+          <Ionicons name="card-outline" size={23} color="#1554D9" />
+          <Text style={styles.footerActiveText}>Membership</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Classes')}>
+          <MaterialCommunityIcons name="calendar-clock" size={23} color="#94A3B8" />
+          <Text style={styles.footerText}>Classes</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Trainer')}>
+          <MaterialCommunityIcons name="dumbbell" size={23} color="#94A3B8" />
+          <Text style={styles.footerText}>Trainers</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -160,130 +148,167 @@ export default function MembershipScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#071A12',
+    backgroundColor: '#F4F7FB',
   },
   page: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 115,
   },
   header: {
-    backgroundColor: '#00A86B',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 18,
+    paddingTop: 62,
+    paddingHorizontal: 22,
+    paddingBottom: 58,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
   },
-  smallText: {
-    color: '#E8FFF5',
-    fontSize: 14,
-    marginBottom: 6,
+  headerLabel: {
+    color: '#DDE6FF',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 3,
+    marginBottom: 8,
   },
-  title: {
+  headerTitle: {
     color: '#ffffff',
-    fontSize: 30,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
-  subtitle: {
-    color: '#E8FFF5',
+  headerSub: {
+    color: '#E0E7FF',
     fontSize: 15,
+    fontWeight: '600',
     lineHeight: 22,
+    marginTop: 10,
+  },
+  content: {
+    marginTop: -30,
+    paddingHorizontal: 18,
   },
   planCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 22,
+    borderRadius: 24,
     padding: 20,
     marginBottom: 16,
     borderWidth: 2,
     borderColor: '#ffffff',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 4,
   },
   selectedPlanCard: {
-    backgroundColor: '#E8FFF5',
-    borderColor: '#00A86B',
+    borderColor: '#1554D9',
+    backgroundColor: '#F8FBFF',
   },
-  planHeader: {
+  planTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
   },
   planName: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#101820',
+    color: '#111827',
+    fontSize: 23,
+    fontWeight: '900',
   },
   planDescription: {
-    color: '#777',
+    color: '#64748B',
     fontSize: 14,
-    marginTop: 4,
+    fontWeight: '600',
+    marginTop: 5,
   },
   price: {
-    color: '#00A86B',
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: '#1554D9',
+    fontSize: 24,
+    fontWeight: '900',
     marginBottom: 14,
   },
   featureList: {
-    marginTop: 4,
+    gap: 8,
+  },
+  featureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   feature: {
-    color: '#333',
+    color: '#334155',
     fontSize: 14,
-    marginBottom: 6,
-  },
-  selectedText: {
-    color: '#071A12',
-  },
-  selectedSubText: {
-    color: '#305C47',
-  },
-  selectedPrice: {
-    color: '#008A58',
-  },
-  selectedFeature: {
-    color: '#071A12',
-    fontWeight: '500',
+    fontWeight: '700',
+    marginLeft: 8,
   },
   radioCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     borderWidth: 2,
-    borderColor: '#B8B8B8',
-    alignItems: 'center',
+    borderColor: '#CBD5E1',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 12,
   },
   radioCircleSelected: {
-    backgroundColor: '#00A86B',
-    borderColor: '#00A86B',
-  },
-  tick: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-    fontSize: 16,
+    backgroundColor: '#1554D9',
+    borderColor: '#1554D9',
   },
   confirmButton: {
-    backgroundColor: '#00A86B',
-    paddingVertical: 16,
-    borderRadius: 16,
+    backgroundColor: '#1554D9',
+    height: 56,
+    borderRadius: 17,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 6,
-    marginBottom: 12,
+    marginTop: 8,
+    shadowColor: '#1554D9',
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
   },
   confirmText: {
     color: '#ffffff',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '900',
   },
-  backButton: {
-    borderColor: '#00A86B',
-    borderWidth: 1.5,
-    paddingVertical: 16,
-    borderRadius: 16,
+  footer: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 10,
+    height: 74,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#E5EAF3',
   },
-  backText: {
-    color: '#00A86B',
-    fontSize: 16,
-    fontWeight: 'bold',
+  footerItem: {
+    flex: 1,
+    height: 56,
+    marginHorizontal: 4,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerActive: {
+    backgroundColor: '#EEF4FF',
+  },
+  footerText: {
+    color: '#94A3B8',
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  footerActiveText: {
+    color: '#1554D9',
+    fontSize: 11,
+    fontWeight: '900',
+    marginTop: 4,
   },
 });

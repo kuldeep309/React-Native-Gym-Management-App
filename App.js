@@ -9,13 +9,17 @@ import HomeScreen from './screens/HomeScreen.js';
 import MembershipScreen from './screens/MembershipScreen.js';
 import ClassScheduleScreen from './screens/ClassScheduleScreen.js';
 import TrainerScreen from './screens/TrainerScreen.js';
+import ProfileScreen from './screens/ProfileScreen.js';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Welcome">
+      <Stack.Navigator
+        initialRouteName="Welcome"
+        screenOptions={{ headerShown: false }}
+      >
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
@@ -23,6 +27,7 @@ export default function App() {
         <Stack.Screen name="Membership" component={MembershipScreen} />
         <Stack.Screen name="Classes" component={ClassScheduleScreen} />
         <Stack.Screen name="Trainer" component={TrainerScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
