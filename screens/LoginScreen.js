@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,23 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -32,7 +43,8 @@ export default function LoginScreen({ navigation }) {
       const user = JSON.parse(storedUser);
 
       if (email === user.email && password === user.password) {
-        Alert.alert('Success', 'Login successful');
+        const userRole = user.role || 'Member';
+        Alert.alert('Success', `Login successful as ${userRole}`);
         navigation.navigate('Home');
       } else {
         Alert.alert('Error', 'Invalid email or password');
@@ -47,38 +59,82 @@ export default function LoginScreen({ navigation }) {
       style={styles.page}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.card}>
-        <Text style={styles.logo}>💪</Text>
-        <Text style={styles.title}>Member Login</Text>
-        <Text style={styles.subtitle}>Access your gym account</Text>
+      <StatusBar barStyle="light-content" backgroundColor="#1D4ED8" />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email Address"
-          placeholderTextColor="#8a8a8a"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <LinearGradient colors={['#1D4ED8', '#4338CA']} style={styles.header}>
+          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.subtitle}>
+            Login to continue managing your gym account
+          </Text>
+        </LinearGradient>
 
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#8a8a8a"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <View style={styles.card}>
+          <Text style={styles.label}>Email</Text>
+          <View style={styles.inputBox}>
+            <Ionicons name="mail-outline" size={24} color="#6B7280" />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              placeholderTextColor="#7B8190"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handleLogin}>
-          <Text style={styles.primaryText}>Login</Text>
-        </TouchableOpacity>
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.inputBox}>
+            <Ionicons name="lock-closed-outline" size={24} color="#6B7280" />
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your password"
+              placeholderTextColor="#7B8190"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={25}
+                color="#6B7280"
+              />
+            </TouchableOpacity>
+          </View>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.linkText}>Create new account</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity activeOpacity={0.8}>
+            <Text style={styles.forgotText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.primaryButton}
+            onPress={handleLogin}
+          >
+            <Text style={styles.primaryText}>Login</Text>
+          </TouchableOpacity>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.divider} />
+          </View>
+
+          <TouchableOpacity
+            activeOpacity={0.85}
+            style={styles.createButton}
+            onPress={() => navigation.navigate('Register')}
+          >
+            <Text style={styles.createText}>Create New Account</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -86,58 +142,118 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
   page: {
     flex: 1,
-    backgroundColor: '#101820',
-    justifyContent: 'center',
-    padding: 24,
+    backgroundColor: '#F4F7FB',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  header: {
+    paddingTop: 95,
+    paddingBottom: 150,
+    paddingHorizontal: 24,
+  },
+  title: {
+    color: '#ffffff',
+    fontSize: 40,
+    fontWeight: '900',
+    marginBottom: 18,
+  },
+  subtitle: {
+    color: '#DDE6FF',
+    fontSize: 19,
+    fontWeight: '800',
+    lineHeight: 28,
   },
   card: {
     backgroundColor: '#ffffff',
-    borderRadius: 20,
-    padding: 24,
+    marginHorizontal: 20,
+    marginTop: -105,
+    borderRadius: 30,
+    paddingHorizontal: 24,
+    paddingTop: 34,
+    paddingBottom: 36,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 6,
   },
-  logo: {
-    fontSize: 52,
-    textAlign: 'center',
+  label: {
+    color: '#6B7280',
+    fontSize: 17,
+    fontWeight: '900',
     marginBottom: 10,
+    marginLeft: 4,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#101820',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 15,
-    color: '#666',
-    textAlign: 'center',
+  inputBox: {
+    height: 66,
+    backgroundColor: '#F1F3F6',
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
     marginBottom: 24,
   },
   input: {
-    backgroundColor: '#f3f5f7',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 14,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: '#e1e1e1',
+    flex: 1,
+    color: '#111827',
+    fontSize: 17,
+    fontWeight: '600',
+    marginLeft: 13,
+  },
+  forgotText: {
+    color: '#0B55D9',
+    fontSize: 16,
+    fontWeight: '900',
+    textAlign: 'right',
+    marginTop: -10,
+    marginBottom: 30,
   },
   primaryButton: {
-    backgroundColor: '#00A86B',
-    paddingVertical: 15,
-    borderRadius: 12,
+    backgroundColor: '#0B55D9',
+    height: 64,
+    borderRadius: 16,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 6,
-    marginBottom: 16,
+    shadowColor: '#0B55D9',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 5,
   },
   primaryText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 21,
+    fontWeight: '900',
   },
-  linkText: {
-    color: '#00A86B',
-    textAlign: 'center',
-    fontWeight: 'bold',
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 34,
+  },
+  divider: {
+    flex: 1,
+    height: 1.5,
+    backgroundColor: '#CBD2E1',
+  },
+  dividerText: {
+    color: '#6B7280',
+    fontSize: 15,
+    fontWeight: '900',
+    marginHorizontal: 18,
+    letterSpacing: 2,
+  },
+  createButton: {
+    height: 62,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#0B55D9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  createText: {
+    color: '#0B55D9',
+    fontSize: 19,
+    fontWeight: '900',
   },
 });
