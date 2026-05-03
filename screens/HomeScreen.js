@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useLayoutEffect } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,24 @@ import {
   TouchableOpacity,
   ScrollView,
   SafeAreaView,
+  StatusBar,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function HomeScreen({ navigation }) {
   const [user, setUser] = useState(null);
   const [membershipPlan, setMembershipPlan] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
   const [assignedTrainer, setAssignedTrainer] = useState(null);
+
+  const userRole = user?.role || 'Member';
+  const isStaff = userRole === 'Staff';
+
+  useLayoutEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -22,181 +32,303 @@ export default function HomeScreen({ navigation }) {
       const storedClass = await AsyncStorage.getItem('selectedClass');
       const storedTrainer = await AsyncStorage.getItem('assignedTrainer');
 
-
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
-      }
-
-      if (storedPlan) {
-        setMembershipPlan(JSON.parse(storedPlan));
-      }
-
-      if (storedClass) {
-        setSelectedClass(JSON.parse(storedClass));
-      }
-
-      if (storedTrainer) {
-        setAssignedTrainer(JSON.parse(storedTrainer));
-      }
+      if (storedUser) setUser(JSON.parse(storedUser));
+      if (storedPlan) setMembershipPlan(JSON.parse(storedPlan));
+      if (storedClass) setSelectedClass(JSON.parse(storedClass));
+      if (storedTrainer) setAssignedTrainer(JSON.parse(storedTrainer));
     };
 
     const unsubscribe = navigation.addListener('focus', loadData);
     return unsubscribe;
   }, [navigation]);
 
-const handleLogout = async () => {
-  await AsyncStorage.removeItem('membershipPlan');
-  await AsyncStorage.removeItem('selectedClass');
-  await AsyncStorage.removeItem('assignedTrainer');
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('membershipPlan');
+    await AsyncStorage.removeItem('selectedClass');
+    await AsyncStorage.removeItem('assignedTrainer');
 
-  navigation.reset({
-    index: 0,
-    routes: [{ name: 'Welcome' }],
-  });
-};
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Welcome' }],
+    });
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.headerCard}>
-          <Text style={styles.smallText}>Welcome back</Text>
-          <Text style={styles.title}>{user ? user.name : 'Gym Member'}</Text>
-          <Text style={styles.subtitle}>
-            Manage your gym account, membership plan and billing status.
-          </Text>
-        </View>
+      <StatusBar barStyle="light-content" backgroundColor="#1554D9" />
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Account Details</Text>
+      <ScrollView contentContainerStyle={styles.page} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={['#1554D9', '#4338CA']} style={styles.header}>
+          <View style={styles.headerTextBox}>
+            <Text style={styles.greeting}>Welcome back</Text>
+            <Text style={styles.userName}>{user ? user.name : 'Gym User'}</Text>
+            <Text style={styles.userEmail}>{user ? user.email : 'user@gympro.com'}</Text>
 
-          <View style={styles.row}>
-            <Text style={styles.label}>Name</Text>
-            <Text style={styles.value}>{user ? user.name : '-'}</Text>
+            <View style={styles.roleBadge}>
+              <Text style={styles.roleBadgeText}>{isStaff ? 'STAFF ACCOUNT' : 'MEMBER ACCOUNT'}</Text>
+            </View>
           </View>
 
-          <View style={styles.row}>
-            <Text style={styles.label}>Email</Text>
-            <Text style={styles.value}>{user ? user.email : '-'}</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.headerIcon}
+              onPress={() => navigation.navigate('Profile')}
+            >
+              <Ionicons name="person-outline" size={22} color="#ffffff" />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.headerIcon} onPress={handleLogout}>
+              <Ionicons name="log-out-outline" size={22} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        <View style={styles.overviewCard}>
+          <View style={styles.overviewTop}>
+            <View>
+              <Text style={styles.overviewTitle}>
+                {isStaff ? 'Staff Dashboard' : 'Member Dashboard'}
+              </Text>
+              <Text style={styles.overviewSub}>
+                {isStaff
+                  ? 'Manage class schedules, trainer assignments and working hours.'
+                  : 'Manage your membership, class booking and trainer details.'}
+              </Text>
+            </View>
+
+            <View style={styles.memberBadge}>
+              <Text style={styles.memberBadgeText}>
+                {isStaff ? 'STAFF' : membershipPlan ? 'ACTIVE' : 'NEW'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.statsRow}>
+            <View style={styles.statBox}>
+              <Ionicons
+                name={isStaff ? 'calendar-outline' : 'card-outline'}
+                size={24}
+                color="#1554D9"
+              />
+              <Text style={styles.statLabel}>
+                {isStaff ? 'Classes' : 'Plan'}
+              </Text>
+              <Text numberOfLines={1} style={styles.statValue}>
+                {isStaff ? 'Manage' : membershipPlan ? membershipPlan.name : 'None'}
+              </Text>
+            </View>
+
+            <View style={styles.statBox}>
+              <MaterialCommunityIcons
+                name={isStaff ? 'account-tie-outline' : 'calendar-clock'}
+                size={24}
+                color="#1554D9"
+              />
+              <Text style={styles.statLabel}>
+                {isStaff ? 'Trainer' : 'Class'}
+              </Text>
+              <Text numberOfLines={1} style={styles.statValue}>
+                {isStaff
+                  ? assignedTrainer
+                    ? assignedTrainer.name
+                    : 'None'
+                  : selectedClass
+                    ? selectedClass.name
+                    : 'None'}
+              </Text>
+            </View>
+
+            <View style={styles.statBox}>
+              <Ionicons
+                name={isStaff ? 'time-outline' : 'person-outline'}
+                size={24}
+                color="#1554D9"
+              />
+              <Text style={styles.statLabel}>
+                {isStaff ? 'Hours' : 'Trainer'}
+              </Text>
+              <Text numberOfLines={1} style={styles.statValue}>
+                {isStaff
+                  ? assignedTrainer?.hours || 'None'
+                  : assignedTrainer
+                    ? assignedTrainer.name
+                    : 'None'}
+              </Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Membership & Billing</Text>
-
-          {membershipPlan ? (
-            <>
-              <View style={styles.row}>
-                <Text style={styles.label}>Plan</Text>
-                <Text style={styles.value}>{membershipPlan.name}</Text>
-              </View>
-
-              <View style={styles.row}>
-                <Text style={styles.label}>Price</Text>
-                <Text style={styles.value}>{membershipPlan.price}</Text>
-              </View>
-
-              <View style={styles.row}>
-                <Text style={styles.label}>Status</Text>
-                <Text style={styles.activeStatus}>{membershipPlan.status}</Text>
-              </View>
-
-              <View style={styles.row}>
-                <Text style={styles.label}>Billing Date</Text>
-                <Text style={styles.value}>{membershipPlan.billingDate}</Text>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.emptyText}>No membership plan selected yet.</Text>
-          )}
-
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Class & Activity</Text>
-
-          {selectedClass ? (
-            <>
-              <View style={styles.row}>
-                <Text style={styles.label}>Class</Text>
-                <Text style={styles.value}>{selectedClass.name}</Text>
-              </View>
-
-              <View style={styles.row}>
-                <Text style={styles.label}>Time</Text>
-                <Text style={styles.value}>{selectedClass.time}</Text>
-              </View>
-
-              <View style={styles.row}>
-                <Text style={styles.label}>Trainer</Text>
-                <Text style={styles.value}>{selectedClass.trainer}</Text>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.emptyText}>
-              No class selected yet.
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconCircle}>
+              <Ionicons name="person-outline" size={22} color="#1554D9" />
+            </View>
+            <Text style={styles.sectionTitle}>
+              {isStaff ? 'Staff Profile' : 'Member Profile'}
             </Text>
-          )}
-        </View>
+          </View>
 
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Trainer Assignment</Text>
-
-          {assignedTrainer ? (
-            <>
-              <View style={styles.row}>
-                <Text style={styles.label}>Trainer</Text>
-                <Text style={styles.value}>{assignedTrainer.name}</Text>
-              </View>
-
-              <View style={styles.row}>
-                <Text style={styles.label}>Specialization</Text>
-                <Text style={styles.value}>{assignedTrainer.specialization}</Text>
-              </View>
-
-              <View style={styles.row}>
-                <Text style={styles.label}>Working Hours</Text>
-                <Text style={styles.value}>{assignedTrainer.hours}</Text>
-              </View>
-            </>
-          ) : (
-            <Text style={styles.emptyText}>
-              No trainer assigned yet.
-            </Text>
-          )}
-        </View>
-
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => navigation.navigate('Membership')}
-        >
-          <Text style={styles.primaryText}>
-            {membershipPlan ? 'Change Membership Plan' : 'Choose Membership Plan'}
+          <Text style={styles.sectionText}>
+            {user ? `${user.name} • ${user.email}` : 'No profile details found.'}
           </Text>
+
+          <Text style={styles.mutedText}>Role: {userRole}</Text>
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Profile')}
+          >
+            <Text style={styles.actionText}>Manage Profile</Text>
+          </TouchableOpacity>
+        </View>
+
+        {!isStaff && (
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.iconCircle}>
+                <Ionicons name="card-outline" size={22} color="#1554D9" />
+              </View>
+              <Text style={styles.sectionTitle}>Membership & Billing</Text>
+            </View>
+
+            <Text style={styles.sectionText}>
+              {membershipPlan
+                ? `${membershipPlan.name} plan • ${membershipPlan.price} • ${membershipPlan.status}`
+                : 'No membership plan selected yet.'}
+            </Text>
+
+            {membershipPlan?.billingDate ? (
+              <Text style={styles.mutedText}>Billing date: {membershipPlan.billingDate}</Text>
+            ) : null}
+
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => navigation.navigate('Membership')}
+            >
+              <Text style={styles.actionText}>
+                {membershipPlan ? 'Change Membership' : 'Choose Membership'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconCircle}>
+              <MaterialCommunityIcons name="calendar-clock" size={22} color="#1554D9" />
+            </View>
+            <Text style={styles.sectionTitle}>
+              {isStaff ? 'Class Schedule Management' : 'Class Activity'}
+            </Text>
+          </View>
+
+          <Text style={styles.sectionText}>
+            {isStaff
+              ? 'Add, update or delete class schedules for gym members.'
+              : selectedClass
+                ? `${selectedClass.name} • ${selectedClass.time}`
+                : 'No class selected yet.'}
+          </Text>
+
+          {!isStaff && selectedClass?.trainer ? (
+            <Text style={styles.mutedText}>Class trainer: {selectedClass.trainer}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Classes')}
+          >
+            <Text style={styles.actionText}>
+              {isStaff ? 'Manage Class Schedules' : 'Book / View Classes'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.sectionCard}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconCircle}>
+              <MaterialCommunityIcons name="dumbbell" size={22} color="#1554D9" />
+            </View>
+            <Text style={styles.sectionTitle}>
+              {isStaff ? 'Trainer & Hours Management' : 'Trainer Assignment'}
+            </Text>
+          </View>
+
+          <Text style={styles.sectionText}>
+            {assignedTrainer
+              ? `${assignedTrainer.name} • ${assignedTrainer.specialization}`
+              : isStaff
+                ? 'No trainer assigned to a class yet.'
+                : 'No trainer assigned yet.'}
+          </Text>
+
+          {assignedTrainer?.assignedClass ? (
+            <Text style={styles.mutedText}>
+              Assigned class: {assignedTrainer.assignedClass}
+            </Text>
+          ) : null}
+
+          {assignedTrainer?.assignedClassTime ? (
+            <Text style={styles.mutedText}>
+              Class time: {assignedTrainer.assignedClassTime}
+            </Text>
+          ) : null}
+
+          {assignedTrainer?.hours ? (
+            <Text style={styles.mutedText}>Working hours: {assignedTrainer.hours}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Trainer')}
+          >
+            <Text style={styles.actionText}>
+              {isStaff ? 'Assign Trainer / Track Hours' : 'View Trainer'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity style={[styles.footerItem, styles.footerActive]}>
+          <Ionicons name="grid-outline" size={23} color="#1554D9" />
+          <Text style={styles.footerActiveText}>Home</Text>
         </TouchableOpacity>
 
+        {!isStaff && (
+          <TouchableOpacity
+            style={styles.footerItem}
+            onPress={() => navigation.navigate('Membership')}
+          >
+            <Ionicons name="card-outline" size={23} color="#94A3B8" />
+            <Text style={styles.footerText}>Membership</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
-          style={styles.primaryButton}
+          style={styles.footerItem}
           onPress={() => navigation.navigate('Classes')}
         >
-          <Text style={styles.primaryText}>
-            Select Class / Activity
-          </Text>
+          <MaterialCommunityIcons name="calendar-clock" size={23} color="#94A3B8" />
+          <Text style={styles.footerText}>Classes</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.primaryButton}
+          style={styles.footerItem}
           onPress={() => navigation.navigate('Trainer')}
         >
-          <Text style={styles.primaryText}>
-            Assign Trainer
-          </Text>
+          <MaterialCommunityIcons name="dumbbell" size={23} color="#94A3B8" />
+          <Text style={styles.footerText}>Trainers</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <Ionicons name="person-outline" size={23} color="#94A3B8" />
+          <Text style={styles.footerText}>Profile</Text>
         </TouchableOpacity>
-
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
@@ -204,92 +336,233 @@ const handleLogout = async () => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#071A12',
+    backgroundColor: '#F4F7FB',
   },
   page: {
-    padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 115,
   },
-  headerCard: {
-    backgroundColor: '#00A86B',
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 18,
+  header: {
+    paddingTop: 58,
+    paddingHorizontal: 22,
+    paddingBottom: 68,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  smallText: {
-    color: '#E8FFF5',
-    fontSize: 14,
+  headerTextBox: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  greeting: {
+    color: '#DDE6FF',
+    fontSize: 15,
+    fontWeight: '700',
     marginBottom: 6,
   },
-  title: {
+  userName: {
     color: '#ffffff',
-    fontSize: 30,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 31,
+    fontWeight: '900',
+    letterSpacing: -0.5,
   },
-  subtitle: {
-    color: '#E8FFF5',
-    fontSize: 15,
-    lineHeight: 22,
+  userEmail: {
+    color: '#E0E7FF',
+    fontSize: 14,
+    marginTop: 6,
+    fontWeight: '600',
   },
-  card: {
+  roleBadge: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 13,
+    alignSelf: 'flex-start',
+    marginTop: 12,
+  },
+  roleBadgeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  headerIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overviewCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 22,
-    padding: 22,
-    marginBottom: 16,
+    marginHorizontal: 18,
+    marginTop: -42,
+    borderRadius: 26,
+    padding: 20,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.08,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 5,
   },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#101820',
+  overviewTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
     marginBottom: 18,
   },
-  row: {
+  overviewTitle: {
+    color: '#111827',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  overviewSub: {
+    color: '#64748B',
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: 6,
+    maxWidth: 230,
+  },
+  memberBadge: {
+    backgroundColor: '#EEF4FF',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 13,
+    alignSelf: 'flex-start',
+  },
+  memberBadgeText: {
+    color: '#1554D9',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: '#F1F5FF',
+    borderRadius: 18,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    minHeight: 112,
+  },
+  statLabel: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 8,
+  },
+  statValue: {
+    color: '#111827',
+    fontSize: 13,
+    fontWeight: '900',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  sectionCard: {
+    backgroundColor: '#ffffff',
+    marginHorizontal: 18,
+    marginTop: 18,
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 14,
   },
-  label: {
-    color: '#777',
-    fontSize: 13,
-    marginBottom: 4,
+  iconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: '#EEF4FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  value: {
-    color: '#101820',
-    fontSize: 16,
-    fontWeight: 'bold',
+  sectionTitle: {
+    color: '#111827',
+    fontSize: 18,
+    fontWeight: '900',
   },
-  activeStatus: {
-    color: '#00A86B',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  emptyText: {
-    color: '#777',
+  sectionText: {
+    color: '#334155',
     fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 22,
   },
-  primaryButton: {
-    backgroundColor: '#00A86B',
-    paddingVertical: 16,
-    borderRadius: 16,
-    alignItems: 'center',
+  mutedText: {
+    color: '#64748B',
+    fontSize: 13,
     marginTop: 6,
-    marginBottom: 12,
+    fontWeight: '600',
   },
-  primaryText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  logoutButton: {
-    borderColor: '#00A86B',
-    borderWidth: 1.5,
-    paddingVertical: 16,
-    borderRadius: 16,
+  actionButton: {
+    backgroundColor: '#1554D9',
+    height: 50,
+    borderRadius: 15,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginTop: 18,
   },
-  logoutText: {
-    color: '#00A86B',
-    fontSize: 16,
-    fontWeight: 'bold',
+  actionText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  footer: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 10,
+    height: 74,
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#E5EAF3',
+  },
+  footerItem: {
+    flex: 1,
+    height: 56,
+    marginHorizontal: 3,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  footerActive: {
+    backgroundColor: '#EEF4FF',
+  },
+  footerText: {
+    color: '#94A3B8',
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  footerActiveText: {
+    color: '#1554D9',
+    fontSize: 10,
+    fontWeight: '900',
+    marginTop: 4,
   },
 });
