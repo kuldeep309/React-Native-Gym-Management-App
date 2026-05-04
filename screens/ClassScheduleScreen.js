@@ -63,15 +63,28 @@ export default function ClassScheduleScreen({ navigation }) {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
+  const getUserId = (loggedUser) => {
+    return loggedUser?.id || loggedUser?.email;
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        const storedUser = await AsyncStorage.getItem('user');
+        const storedCurrentUser = await AsyncStorage.getItem('currentUser');
         const storedClasses = await AsyncStorage.getItem('classSchedules');
 
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+        if (!storedCurrentUser) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+          return;
         }
+
+        const currentUser = JSON.parse(storedCurrentUser);
+        const userId = getUserId(currentUser);
+
+        setUser(currentUser);
 
         if (storedClasses) {
           setClasses(JSON.parse(storedClasses));
@@ -79,6 +92,9 @@ export default function ClassScheduleScreen({ navigation }) {
           await AsyncStorage.setItem('classSchedules', JSON.stringify(defaultClasses));
           setClasses(defaultClasses);
         }
+
+        const storedSelectedClass = await AsyncStorage.getItem(`selectedClass_${userId}`);
+        setSelectedClass(storedSelectedClass ? JSON.parse(storedSelectedClass) : null);
       } catch (error) {
         Alert.alert('Error', 'Unable to load class schedules.');
       }
@@ -102,7 +118,7 @@ export default function ClassScheduleScreen({ navigation }) {
   };
 
   const handleAddOrUpdateClass = async () => {
-    if (!className || !classTime || !classTrainer || !classDescription) {
+    if (!className.trim() || !classTime.trim() || !classTrainer.trim() || !classDescription.trim()) {
       Alert.alert('Missing Details', 'Please fill in all class schedule fields.');
       return;
     }
@@ -113,25 +129,32 @@ export default function ClassScheduleScreen({ navigation }) {
           gymClass.id === editingClassId
             ? {
                 ...gymClass,
-                name: className,
-                time: classTime,
-                trainer: classTrainer,
-                description: classDescription,
+                name: className.trim(),
+                time: classTime.trim(),
+                trainer: classTrainer.trim(),
+                description: classDescription.trim(),
               }
             : gymClass
         );
 
         await saveClasses(updatedClasses);
 
-        if (selectedClass?.id === editingClassId) {
+        if (selectedClass?.id === editingClassId && user) {
+          const userId = getUserId(user);
           const updatedSelectedClass = updatedClasses.find(
             (gymClass) => gymClass.id === editingClassId
           );
 
-          setSelectedClass(updatedSelectedClass);
+          const updatedSelectedClassData = {
+            ...updatedSelectedClass,
+            status: 'Registered',
+          };
+
+          setSelectedClass(updatedSelectedClassData);
+
           await AsyncStorage.setItem(
-            'selectedClass',
-            JSON.stringify({ ...updatedSelectedClass, status: 'Registered' })
+            `selectedClass_${userId}`,
+            JSON.stringify(updatedSelectedClassData)
           );
         }
 
@@ -139,13 +162,14 @@ export default function ClassScheduleScreen({ navigation }) {
       } else {
         const newClass = {
           id: Date.now(),
-          name: className,
-          time: classTime,
-          trainer: classTrainer,
-          description: classDescription,
+          name: className.trim(),
+          time: classTime.trim(),
+          trainer: classTrainer.trim(),
+          description: classDescription.trim(),
         };
 
         const updatedClasses = [...classes, newClass];
+
         await saveClasses(updatedClasses);
         Alert.alert('Success', 'New class schedule added successfully.');
       }
@@ -169,9 +193,10 @@ export default function ClassScheduleScreen({ navigation }) {
       const updatedClasses = classes.filter((gymClass) => gymClass.id !== classId);
       await saveClasses(updatedClasses);
 
-      if (selectedClass?.id === classId) {
+      if (selectedClass?.id === classId && user) {
+        const userId = getUserId(user);
         setSelectedClass(null);
-        await AsyncStorage.removeItem('selectedClass');
+        await AsyncStorage.removeItem(`selectedClass_${userId}`);
       }
 
       if (editingClassId === classId) {
@@ -190,13 +215,21 @@ export default function ClassScheduleScreen({ navigation }) {
       return;
     }
 
+    if (!user) {
+      Alert.alert('Error', 'No logged-in user found.');
+      return;
+    }
+
+    const userId = getUserId(user);
+
     const classData = {
       ...selectedClass,
       status: 'Registered',
+      registeredAt: new Date().toISOString(),
     };
 
     try {
-      await AsyncStorage.setItem('selectedClass', JSON.stringify(classData));
+      await AsyncStorage.setItem(`selectedClass_${userId}`, JSON.stringify(classData));
       Alert.alert('Success', `You registered for ${selectedClass.name}.`);
       navigation.navigate('Home');
     } catch (error) {

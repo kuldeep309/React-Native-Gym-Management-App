@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function ProfileScreen({ navigation }) {
+  const [currentUser, setCurrentUser] = useState(null);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState('Member');
@@ -35,15 +36,23 @@ export default function ProfileScreen({ navigation }) {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const storedUser = await AsyncStorage.getItem('user');
+        const storedCurrentUser = await AsyncStorage.getItem('currentUser');
 
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          setName(user.name || '');
-          setEmail(user.email || '');
-          setRole(user.role || 'Member');
-          setStoredPassword(user.password || '');
+        if (!storedCurrentUser) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+          return;
         }
+
+        const user = JSON.parse(storedCurrentUser);
+
+        setCurrentUser(user);
+        setName(user.name || '');
+        setEmail(user.email || '');
+        setRole(user.role || 'Member');
+        setStoredPassword(user.password || '');
       } catch (error) {
         Alert.alert('Error', 'Unable to load profile details.');
       }
@@ -54,12 +63,15 @@ export default function ProfileScreen({ navigation }) {
   }, [navigation]);
 
   const handleUpdateProfile = async () => {
-    if (!name || !email) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedName || !trimmedEmail) {
       Alert.alert('Error', 'Name and email are required.');
       return;
     }
 
-    if (!email.includes('@')) {
+    if (!trimmedEmail.includes('@')) {
       Alert.alert('Error', 'Please enter a valid email address.');
       return;
     }
@@ -74,18 +86,47 @@ export default function ProfileScreen({ navigation }) {
       return;
     }
 
-    const updatedUser = {
-      name,
-      email,
-      role,
-      password: newPassword ? newPassword : storedPassword,
-    };
-
     try {
-      await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+      const storedUsers = await AsyncStorage.getItem('users');
+      const users = storedUsers ? JSON.parse(storedUsers) : [];
+
+      if (!currentUser) {
+        Alert.alert('Error', 'No logged-in user found.');
+        return;
+      }
+
+      const emailTaken = users.some(
+        user =>
+          user.email.toLowerCase() === trimmedEmail &&
+          user.id !== currentUser.id
+      );
+
+      if (emailTaken) {
+        Alert.alert('Error', 'This email is already used by another account.');
+        return;
+      }
+
+      const updatedUser = {
+        ...currentUser,
+        name: trimmedName,
+        email: trimmedEmail,
+        role,
+        password: newPassword ? newPassword : storedPassword,
+        updatedAt: new Date().toISOString(),
+      };
+
+      const updatedUsers = users.map(user =>
+        user.id === currentUser.id ? updatedUser : user
+      );
+
+      await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
+      await AsyncStorage.setItem('currentUser', JSON.stringify(updatedUser));
+
+      setCurrentUser(updatedUser);
       setStoredPassword(updatedUser.password);
       setNewPassword('');
       setConfirmPassword('');
+
       Alert.alert('Success', 'Profile updated successfully.');
       navigation.navigate('Home');
     } catch (error) {

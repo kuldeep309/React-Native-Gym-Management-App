@@ -27,15 +27,32 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     const loadData = async () => {
-      const storedUser = await AsyncStorage.getItem('user');
-      const storedPlan = await AsyncStorage.getItem('membershipPlan');
-      const storedClass = await AsyncStorage.getItem('selectedClass');
-      const storedTrainer = await AsyncStorage.getItem('assignedTrainer');
+      try {
+        const storedCurrentUser = await AsyncStorage.getItem('currentUser');
 
-      if (storedUser) setUser(JSON.parse(storedUser));
-      if (storedPlan) setMembershipPlan(JSON.parse(storedPlan));
-      if (storedClass) setSelectedClass(JSON.parse(storedClass));
-      if (storedTrainer) setAssignedTrainer(JSON.parse(storedTrainer));
+        if (!storedCurrentUser) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+          return;
+        }
+
+        const currentUser = JSON.parse(storedCurrentUser);
+        setUser(currentUser);
+
+        const userId = currentUser.id || currentUser.email;
+
+        const storedPlan = await AsyncStorage.getItem(`membershipPlan_${userId}`);
+        const storedClass = await AsyncStorage.getItem(`selectedClass_${userId}`);
+        const storedTrainer = await AsyncStorage.getItem(`assignedTrainer_${userId}`);
+
+        setMembershipPlan(storedPlan ? JSON.parse(storedPlan) : null);
+        setSelectedClass(storedClass ? JSON.parse(storedClass) : null);
+        setAssignedTrainer(storedTrainer ? JSON.parse(storedTrainer) : null);
+      } catch (error) {
+        console.log('Error loading home data:', error);
+      }
     };
 
     const unsubscribe = navigation.addListener('focus', loadData);
@@ -43,9 +60,7 @@ export default function HomeScreen({ navigation }) {
   }, [navigation]);
 
   const handleLogout = async () => {
-    await AsyncStorage.removeItem('membershipPlan');
-    await AsyncStorage.removeItem('selectedClass');
-    await AsyncStorage.removeItem('assignedTrainer');
+    await AsyncStorage.removeItem('currentUser');
 
     navigation.reset({
       index: 0,
@@ -65,7 +80,9 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.userEmail}>{user ? user.email : 'user@gympro.com'}</Text>
 
             <View style={styles.roleBadge}>
-              <Text style={styles.roleBadgeText}>{isStaff ? 'STAFF ACCOUNT' : 'MEMBER ACCOUNT'}</Text>
+              <Text style={styles.roleBadgeText}>
+                {isStaff ? 'STAFF ACCOUNT' : 'MEMBER ACCOUNT'}
+              </Text>
             </View>
           </View>
 
@@ -198,7 +215,15 @@ export default function HomeScreen({ navigation }) {
             </Text>
 
             {membershipPlan?.billingDate ? (
-              <Text style={styles.mutedText}>Billing date: {membershipPlan.billingDate}</Text>
+              <Text style={styles.mutedText}>
+                Billing date: {membershipPlan.billingDate}
+              </Text>
+            ) : null}
+
+            {membershipPlan?.expiryDate ? (
+              <Text style={styles.mutedText}>
+                Expiry date: {membershipPlan.expiryDate}
+              </Text>
             ) : null}
 
             <TouchableOpacity

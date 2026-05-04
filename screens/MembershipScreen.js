@@ -44,21 +44,59 @@ export default function MembershipScreen({ navigation }) {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
+  const getUserId = (user) => user?.id || user?.email;
+
   const handleConfirm = async () => {
     if (!selectedPlan) {
       Alert.alert('Select a Plan', 'Please choose a membership plan first.');
       return;
     }
 
-    const subscriptionData = {
-      ...selectedPlan,
-      status: 'Active',
-      billingDate: new Date().toLocaleDateString(),
-    };
-
     try {
-      await AsyncStorage.setItem('membershipPlan', JSON.stringify(subscriptionData));
-      Alert.alert('Success', `${selectedPlan.name} plan selected successfully.`);
+      const storedUser = await AsyncStorage.getItem('currentUser');
+
+      if (!storedUser) {
+        Alert.alert('Error', 'No logged-in user found.');
+        return;
+      }
+
+      const user = JSON.parse(storedUser);
+      const userId = getUserId(user);
+
+      const startDate = new Date();
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + 1);
+
+      const subscriptionData = {
+        ...selectedPlan,
+        status: 'Active',
+        startDate: startDate.toISOString(),
+        billingDate: startDate.toLocaleDateString(),
+        expiryDate: expiryDate.toISOString(),
+      };
+
+      // Save current active plan
+      await AsyncStorage.setItem(
+        `membershipPlan_${userId}`,
+        JSON.stringify(subscriptionData)
+      );
+
+      // Save billing history
+      const historyKey = `billingHistory_${userId}`;
+      const storedHistory = await AsyncStorage.getItem(historyKey);
+      const history = storedHistory ? JSON.parse(storedHistory) : [];
+
+      const newHistoryItem = {
+        planName: selectedPlan.name,
+        amount: selectedPlan.price,
+        date: startDate.toLocaleDateString(),
+      };
+
+      const updatedHistory = [newHistoryItem, ...history];
+
+      await AsyncStorage.setItem(historyKey, JSON.stringify(updatedHistory));
+
+      Alert.alert('Success', `${selectedPlan.name} plan activated successfully.`);
       navigation.navigate('Home');
     } catch (error) {
       Alert.alert('Error', 'Unable to save membership plan.');
@@ -85,7 +123,6 @@ export default function MembershipScreen({ navigation }) {
             return (
               <TouchableOpacity
                 key={plan.id}
-                activeOpacity={0.9}
                 style={[styles.planCard, isSelected && styles.selectedPlanCard]}
                 onPress={() => setSelectedPlan(plan)}
               >
@@ -102,14 +139,12 @@ export default function MembershipScreen({ navigation }) {
 
                 <Text style={styles.price}>{plan.price}</Text>
 
-                <View style={styles.featureList}>
-                  {plan.features.map((feature, index) => (
-                    <View key={index} style={styles.featureRow}>
-                      <Ionicons name="checkmark-circle" size={18} color="#1554D9" />
-                      <Text style={styles.feature}>{feature}</Text>
-                    </View>
-                  ))}
-                </View>
+                {plan.features.map((feature, index) => (
+                  <View key={index} style={styles.featureRow}>
+                    <Ionicons name="checkmark-circle" size={18} color="#1554D9" />
+                    <Text style={styles.feature}>{feature}</Text>
+                  </View>
+                ))}
               </TouchableOpacity>
             );
           })}
@@ -119,196 +154,52 @@ export default function MembershipScreen({ navigation }) {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Home')}>
-          <Ionicons name="grid-outline" size={23} color="#94A3B8" />
-          <Text style={styles.footerText}>Home</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={[styles.footerItem, styles.footerActive]}>
-          <Ionicons name="card-outline" size={23} color="#1554D9" />
-          <Text style={styles.footerActiveText}>Membership</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Classes')}>
-          <MaterialCommunityIcons name="calendar-clock" size={23} color="#94A3B8" />
-          <Text style={styles.footerText}>Classes</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.footerItem} onPress={() => navigation.navigate('Trainer')}>
-          <MaterialCommunityIcons name="dumbbell" size={23} color="#94A3B8" />
-          <Text style={styles.footerText}>Trainers</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F4F7FB',
-  },
-  page: {
-    paddingBottom: 115,
-  },
+  safeArea: { flex: 1, backgroundColor: '#F4F7FB' },
+  page: { paddingBottom: 100 },
   header: {
-    paddingTop: 62,
-    paddingHorizontal: 22,
-    paddingBottom: 58,
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 50,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
-  headerLabel: {
-    color: '#DDE6FF',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 3,
-    marginBottom: 8,
-  },
-  headerTitle: {
-    color: '#ffffff',
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: -0.5,
-  },
-  headerSub: {
-    color: '#E0E7FF',
-    fontSize: 15,
-    fontWeight: '600',
-    lineHeight: 22,
-    marginTop: 10,
-  },
-  content: {
-    marginTop: -30,
-    paddingHorizontal: 18,
-  },
+  headerLabel: { color: '#DDE6FF', fontSize: 13, fontWeight: '900' },
+  headerTitle: { color: '#fff', fontSize: 30, fontWeight: '900' },
+  headerSub: { color: '#E0E7FF', marginTop: 10 },
+  content: { padding: 18 },
   planCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
+    backgroundColor: '#fff',
     padding: 20,
-    marginBottom: 16,
-    borderWidth: 2,
-    borderColor: '#ffffff',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.06,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
+    borderRadius: 20,
+    marginBottom: 15,
   },
   selectedPlanCard: {
+    borderWidth: 2,
     borderColor: '#1554D9',
-    backgroundColor: '#F8FBFF',
   },
-  planTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  planName: {
-    color: '#111827',
-    fontSize: 23,
-    fontWeight: '900',
-  },
-  planDescription: {
-    color: '#64748B',
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 5,
-  },
-  price: {
-    color: '#1554D9',
-    fontSize: 24,
-    fontWeight: '900',
-    marginBottom: 14,
-  },
-  featureList: {
-    gap: 8,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  feature: {
-    color: '#334155',
-    fontSize: 14,
-    fontWeight: '700',
-    marginLeft: 8,
-  },
+  planTop: { flexDirection: 'row', justifyContent: 'space-between' },
+  planName: { fontSize: 20, fontWeight: '900' },
+  planDescription: { color: '#64748B' },
+  price: { fontSize: 22, color: '#1554D9', marginVertical: 10 },
+  featureRow: { flexDirection: 'row', marginTop: 5 },
+  feature: { marginLeft: 8 },
   radioCircle: {
-    width: 30,
-    height: 30,
+    width: 25,
+    height: 25,
     borderRadius: 15,
     borderWidth: 2,
-    borderColor: '#CBD5E1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 12,
   },
-  radioCircleSelected: {
-    backgroundColor: '#1554D9',
-    borderColor: '#1554D9',
-  },
+  radioCircleSelected: { backgroundColor: '#1554D9' },
   confirmButton: {
     backgroundColor: '#1554D9',
-    height: 56,
-    borderRadius: 17,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#1554D9',
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 5,
+    padding: 15,
+    borderRadius: 15,
+    marginTop: 10,
   },
-  confirmText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-  footer: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    bottom: 10,
-    height: 74,
-    backgroundColor: '#ffffff',
-    borderRadius: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: '#E5EAF3',
-  },
-  footerItem: {
-    flex: 1,
-    height: 56,
-    marginHorizontal: 4,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  footerActive: {
-    backgroundColor: '#EEF4FF',
-  },
-  footerText: {
-    color: '#94A3B8',
-    fontSize: 11,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-  footerActiveText: {
-    color: '#1554D9',
-    fontSize: 11,
-    fontWeight: '900',
-    marginTop: 4,
-  },
+  confirmText: { color: '#fff', textAlign: 'center', fontWeight: '900' },
 });

@@ -76,6 +76,7 @@ export default function TrainerScreen({ navigation }) {
   const [assignedClass, setAssignedClass] = useState(null);
   const [workingHours, setWorkingHours] = useState('');
   const [savedAssignedTrainer, setSavedAssignedTrainer] = useState(null);
+  const [history, setHistory] = useState([]);
 
   const userRole = user?.role || 'Member';
   const isStaff = userRole === 'Staff';
@@ -84,16 +85,28 @@ export default function TrainerScreen({ navigation }) {
     navigation.setOptions({ headerShown: false });
   }, [navigation]);
 
+  const getUserId = (loggedUser) => {
+    return loggedUser?.id || loggedUser?.email;
+  };
+
   useEffect(() => {
     const loadData = async () => {
       try {
-        const storedUser = await AsyncStorage.getItem('user');
+        const storedCurrentUser = await AsyncStorage.getItem('currentUser');
         const storedClasses = await AsyncStorage.getItem('classSchedules');
-        const storedAssignedTrainer = await AsyncStorage.getItem('assignedTrainer');
 
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
+        if (!storedCurrentUser) {
+          navigation.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+          return;
         }
+
+        const currentUser = JSON.parse(storedCurrentUser);
+        const userId = getUserId(currentUser);
+
+        setUser(currentUser);
 
         if (storedClasses) {
           setAvailableClasses(JSON.parse(storedClasses));
@@ -102,12 +115,18 @@ export default function TrainerScreen({ navigation }) {
           setAvailableClasses(defaultClasses);
         }
 
+        const storedAssignedTrainer = await AsyncStorage.getItem(
+          `assignedTrainer_${userId}`
+        );
+
         if (storedAssignedTrainer) {
-          const trainerData = JSON.parse(storedAssignedTrainer);
-          setSavedAssignedTrainer(trainerData);
+          setSavedAssignedTrainer(JSON.parse(storedAssignedTrainer));
         } else {
           setSavedAssignedTrainer(null);
         }
+
+        const storedHistory = await AsyncStorage.getItem(`trainerHistory_${userId}`);
+        setHistory(storedHistory ? JSON.parse(storedHistory) : []);
       } catch (error) {
         Alert.alert('Error', 'Unable to load trainer details.');
       }
@@ -133,26 +152,60 @@ export default function TrainerScreen({ navigation }) {
       return;
     }
 
-    if (!workingHours) {
+    if (!workingHours.trim()) {
       Alert.alert('Enter Hours', 'Please enter trainer working hours.');
       return;
     }
+
+    if (!user) {
+      Alert.alert('Error', 'No logged-in user found.');
+      return;
+    }
+
+    const userId = getUserId(user);
+    const currentDate = new Date();
 
     const trainerData = {
       ...selectedTrainer,
       assignedClass: assignedClass.name,
       assignedClassTime: assignedClass.time,
-      hours: workingHours,
+      hours: workingHours.trim(),
       status: 'Assigned',
+      assignedAt: currentDate.toISOString(),
+    };
+
+    const historyRecord = {
+      id: Date.now(),
+      trainerName: selectedTrainer.name,
+      specialization: selectedTrainer.specialization,
+      assignedClass: assignedClass.name,
+      assignedClassTime: assignedClass.time,
+      hours: workingHours.trim(),
+      date: currentDate.toLocaleDateString(),
+      recordedAt: currentDate.toISOString(),
     };
 
     try {
-      await AsyncStorage.setItem('assignedTrainer', JSON.stringify(trainerData));
+      await AsyncStorage.setItem(
+        `assignedTrainer_${userId}`,
+        JSON.stringify(trainerData)
+      );
+
+      const storedHistory = await AsyncStorage.getItem(`trainerHistory_${userId}`);
+      const oldHistory = storedHistory ? JSON.parse(storedHistory) : [];
+      const updatedHistory = [historyRecord, ...oldHistory];
+
+      await AsyncStorage.setItem(
+        `trainerHistory_${userId}`,
+        JSON.stringify(updatedHistory)
+      );
+
       setSavedAssignedTrainer(trainerData);
+      setHistory(updatedHistory);
 
       Alert.alert(
         'Success',
-        `${selectedTrainer.name} has been assigned to ${assignedClass.name}.`
+        `${selectedTrainer.name} has been assigned to ${assignedClass.name} and hours were recorded.`
       );
 
       navigation.navigate('Home');
@@ -184,44 +237,70 @@ export default function TrainerScreen({ navigation }) {
 
         <View style={styles.content}>
           {!isStaff && (
-            <View style={styles.memberCard}>
-              <View style={styles.memberIconCircle}>
-                <MaterialCommunityIcons name="dumbbell" size={28} color="#1554D9" />
+            <>
+              <View style={styles.memberCard}>
+                <View style={styles.memberIconCircle}>
+                  <MaterialCommunityIcons name="dumbbell" size={28} color="#1554D9" />
+                </View>
+
+                <Text style={styles.memberCardTitle}>
+                  {savedAssignedTrainer ? savedAssignedTrainer.name : 'No Trainer Assigned'}
+                </Text>
+
+                <Text style={styles.memberCardSub}>
+                  {savedAssignedTrainer
+                    ? savedAssignedTrainer.specialization
+                    : 'A staff member has not assigned a trainer yet.'}
+                </Text>
+
+                {savedAssignedTrainer?.assignedClass ? (
+                  <View style={styles.memberInfoBox}>
+                    <Text style={styles.memberInfoLabel}>Assigned Class</Text>
+                    <Text style={styles.memberInfoValue}>
+                      {savedAssignedTrainer.assignedClass}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {savedAssignedTrainer?.assignedClassTime ? (
+                  <View style={styles.memberInfoBox}>
+                    <Text style={styles.memberInfoLabel}>Class Time</Text>
+                    <Text style={styles.memberInfoValue}>
+                      {savedAssignedTrainer.assignedClassTime}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {savedAssignedTrainer?.hours ? (
+                  <View style={styles.memberInfoBox}>
+                    <Text style={styles.memberInfoLabel}>Working Hours</Text>
+                    <Text style={styles.memberInfoValue}>{savedAssignedTrainer.hours}</Text>
+                  </View>
+                ) : null}
               </View>
 
-              <Text style={styles.memberCardTitle}>
-                {savedAssignedTrainer ? savedAssignedTrainer.name : 'No Trainer Assigned'}
-              </Text>
+              <View style={styles.currentAssignmentCard}>
+                <Text style={styles.currentTitle}>Trainer Hours History</Text>
 
-              <Text style={styles.memberCardSub}>
-                {savedAssignedTrainer
-                  ? savedAssignedTrainer.specialization
-                  : 'A staff member has not assigned a trainer yet.'}
-              </Text>
-
-              {savedAssignedTrainer?.assignedClass ? (
-                <View style={styles.memberInfoBox}>
-                  <Text style={styles.memberInfoLabel}>Assigned Class</Text>
-                  <Text style={styles.memberInfoValue}>{savedAssignedTrainer.assignedClass}</Text>
-                </View>
-              ) : null}
-
-              {savedAssignedTrainer?.assignedClassTime ? (
-                <View style={styles.memberInfoBox}>
-                  <Text style={styles.memberInfoLabel}>Class Time</Text>
-                  <Text style={styles.memberInfoValue}>
-                    {savedAssignedTrainer.assignedClassTime}
-                  </Text>
-                </View>
-              ) : null}
-
-              {savedAssignedTrainer?.hours ? (
-                <View style={styles.memberInfoBox}>
-                  <Text style={styles.memberInfoLabel}>Working Hours</Text>
-                  <Text style={styles.memberInfoValue}>{savedAssignedTrainer.hours}</Text>
-                </View>
-              ) : null}
-            </View>
+                {history.length === 0 ? (
+                  <Text style={styles.currentMuted}>No trainer hour history available.</Text>
+                ) : (
+                  history.slice(0, 5).map((item) => (
+                    <View key={item.id} style={styles.historyItem}>
+                      <Text style={styles.currentText}>
+                        {item.date} • {item.trainerName}
+                      </Text>
+                      <Text style={styles.currentMuted}>
+                        Class: {item.assignedClass}
+                      </Text>
+                      <Text style={styles.currentMuted}>
+                        Hours: {item.hours}
+                      </Text>
+                    </View>
+                  ))
+                )}
+              </View>
+            </>
           )}
 
           {isStaff && (
@@ -337,6 +416,28 @@ export default function TrainerScreen({ navigation }) {
                   </Text>
                 </View>
               )}
+
+              <View style={styles.currentAssignmentCard}>
+                <Text style={styles.currentTitle}>Trainer Hours History</Text>
+
+                {history.length === 0 ? (
+                  <Text style={styles.currentMuted}>No history yet.</Text>
+                ) : (
+                  history.slice(0, 5).map((item) => (
+                    <View key={item.id} style={styles.historyItem}>
+                      <Text style={styles.currentText}>
+                        {item.date} • {item.trainerName}
+                      </Text>
+                      <Text style={styles.currentMuted}>
+                        Class: {item.assignedClass}
+                      </Text>
+                      <Text style={styles.currentMuted}>
+                        Hours: {item.hours}
+                      </Text>
+                    </View>
+                  ))
+                )}
+              </View>
 
               <TouchableOpacity style={styles.primaryButton} onPress={handleAssignTrainer}>
                 <Text style={styles.primaryText}>Confirm Trainer Assignment</Text>
@@ -682,6 +783,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderRadius: 22,
     padding: 18,
+    marginTop: 16,
     marginBottom: 16,
     borderWidth: 1.5,
     borderColor: '#BFDBFE',
@@ -703,6 +805,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginTop: 4,
+  },
+  historyItem: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   primaryButton: {
     backgroundColor: '#1554D9',

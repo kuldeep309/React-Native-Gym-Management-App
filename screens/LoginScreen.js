@@ -27,28 +27,39 @@ export default function LoginScreen({ navigation }) {
   }, [navigation]);
 
   const handleLogin = async () => {
-    if (!email || !password) {
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedEmail || !password) {
       Alert.alert('Error', 'Please enter email and password');
       return;
     }
 
     try {
-      const storedUser = await AsyncStorage.getItem('user');
+      const storedUsers = await AsyncStorage.getItem('users');
+      const users = storedUsers ? JSON.parse(storedUsers) : [];
 
-      if (!storedUser) {
+      if (users.length === 0) {
         Alert.alert('Error', 'No registered user found. Please register first.');
         return;
       }
 
-      const user = JSON.parse(storedUser);
+      const matchedUser = users.find(
+        user =>
+          user.email.toLowerCase() === trimmedEmail &&
+          user.password === password
+      );
 
-      if (email === user.email && password === user.password) {
-        const userRole = user.role || 'Member';
-        Alert.alert('Success', `Login successful as ${userRole}`);
-        navigation.navigate('Home');
-      } else {
+      if (!matchedUser) {
         Alert.alert('Error', 'Invalid email or password');
+        return;
       }
+
+      await AsyncStorage.setItem('currentUser', JSON.stringify(matchedUser));
+
+      const userRole = matchedUser.role || 'Member';
+
+      Alert.alert('Success', `Login successful as ${userRole}`);
+      navigation.navigate('Home');
     } catch (error) {
       Alert.alert('Error', 'Unable to login');
     }

@@ -29,12 +29,15 @@ export default function RegisterScreen({ navigation }) {
   }, [navigation]);
 
   const handleRegister = async () => {
-    if (!name || !email || !role || !password || !confirmPassword) {
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (!trimmedName || !trimmedEmail || !role || !password || !confirmPassword) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
 
-    if (!email.includes('@')) {
+    if (!trimmedEmail.includes('@')) {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
@@ -49,19 +52,31 @@ export default function RegisterScreen({ navigation }) {
       return;
     }
 
-    const userData = {
-      name,
-      email,
-      role,
-      password,
-    };
-
     try {
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      const storedUsers = await AsyncStorage.getItem('users');
+      const users = storedUsers ? JSON.parse(storedUsers) : [];
 
-      await AsyncStorage.removeItem('membershipPlan');
-      await AsyncStorage.removeItem('selectedClass');
-      await AsyncStorage.removeItem('assignedTrainer');
+      const userExists = users.some(
+        user => user.email.toLowerCase() === trimmedEmail
+      );
+
+      if (userExists) {
+        Alert.alert('Error', 'An account with this email already exists');
+        return;
+      }
+
+      const newUser = {
+        id: Date.now().toString(),
+        name: trimmedName,
+        email: trimmedEmail,
+        role,
+        password,
+        createdAt: new Date().toISOString(),
+      };
+
+      const updatedUsers = [...users, newUser];
+
+      await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
 
       Alert.alert('Success', `Registration successful as ${role}`);
       navigation.navigate('Login');
